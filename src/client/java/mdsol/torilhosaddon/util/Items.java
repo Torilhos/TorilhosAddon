@@ -45,7 +45,17 @@ public class Items {
             return -1f;
         }
 
-        return client.player.getItemCooldownManager().getCooldownProgress(stack.getItem(), 0f);
+        return client.player.getItemCooldownManager().getCooldownProgress(stack, 0f);
+    }
+
+    public static float getItemCooldown(@NotNull ItemStack stack) {
+        var client = MinecraftClient.getInstance();
+
+        if (stack.isEmpty() || client.player == null) {
+            return -1f;
+        }
+
+        return client.player.getItemCooldownManager().getCooldownProgress(stack, 0f);
     }
 
     private static ItemStack getCurrentPlayerItemOfType(Function<ItemStack, Boolean> typeChecker) {

@@ -28,7 +28,7 @@ public class HoldToSwingFeature extends BaseToggleableFeature {
         // We try to swing a bit earlier to compensate for ping. Using a static value for the delay since dynamically
         // compensating for the real ping value would add too much complexity, and with a ping over .2 we have other
         // problems anyway.
-        if (client.player.getItemCooldownManager().getCooldownProgress(currentWeapon.getItem(), 0.0f) > 0.2f) {
+        if (client.player.getItemCooldownManager().getCooldownProgress(currentWeapon, 0.0f) > 0.2f) {
             return;
         }
 

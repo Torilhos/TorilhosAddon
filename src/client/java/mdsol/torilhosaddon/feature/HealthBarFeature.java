@@ -5,33 +5,43 @@ import mdsol.torilhosaddon.TorilhosAddon;
 import mdsol.torilhosaddon.feature.base.BaseToggleableFeature;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.render.*;
+import net.minecraft.client.util.BufferAllocator;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
-import org.lwjgl.opengl.GL11;
-
-import java.util.Objects;
+import org.jetbrains.annotations.NotNull;
+import org.joml.Matrix4f;
 
 public class HealthBarFeature extends BaseToggleableFeature {
 
+    // TODO: search for other uses of .immediate for good practices
+    private final VertexConsumerProvider.Immediate vertexConsumer = VertexConsumerProvider.immediate(new BufferAllocator(1536));
+
     public HealthBarFeature() {
         super(TorilhosAddon.CONFIG.keys.showHealthBar);
-        WorldRenderEvents.LAST.register(this::onWorldRender);
+        WorldRenderEvents.LAST.register(this::render);
     }
 
-    public void onWorldRender(WorldRenderContext context) {
-        if (!isEnabled()) {
-            return;
-        }
-
-        if (client.player == null) {
+    private void render(WorldRenderContext context) {
+        if (!isEnabled()
+                || client.player == null
+                || client.options.getPerspective().isFirstPerson()) {
             return;
         }
 
         var healthPercentage = client.player.getHealth() / client.player.getMaxHealth();
 
         if (healthPercentage == 1f) {
+            return;
+        }
+
+        var matrixStack = context.matrixStack();
+
+        if (matrixStack == null) {
             return;
         }
 
@@ -43,54 +53,87 @@ public class HealthBarFeature extends BaseToggleableFeature {
                 MathHelper.lerp(tickDelta, client.player.lastRenderZ, client.player.getZ())
         );
         var renderPos = playerPos.subtract(camera.getPos());
-        var healthBarX = -0.6f + healthPercentage * 1.2f;
+        var barWidth = 1.2f;
+        var barHeight = 0.22f;
+        var barBorder = 0.02f;
+        var scaledBarWidth = barWidth * healthPercentage;
         var healthBarColor = healthPercentage >= 0.75f
                              ? 0xB040CC40
                              : healthPercentage <= 0.4f
                                ? 0xB0CC3030
                                : 0xB0FFCC40;
 
-        var matrixStack = Objects.requireNonNull(context.matrixStack());
-
         matrixStack.push();
 
+        // Use the player position as the center of rotation
         matrixStack.translate(renderPos.x, renderPos.y, renderPos.z);
+
+        // Billboarding
         matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-camera.getYaw() + 180));
         matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-camera.getPitch()));
 
-        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
+        // Place bar slightly below the player
+        matrixStack.translate(0, -0.4f, 0);
+
+        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.disableCull();
         RenderSystem.enableBlend();
-        RenderSystem.depthFunc(GL11.GL_ALWAYS);
+        RenderSystem.disableDepthTest();
 
-        var tessellator = Tessellator.getInstance();
-        var positionMatrix = matrixStack.peek().getPositionMatrix();
+        var matrix = matrixStack.peek().getPositionMatrix();
+        drawRectCentered(matrix, barWidth, barHeight, 0xB0FFFFFF);
+        drawRectCentered(matrix, barWidth - barBorder * 2, barHeight - barBorder * 2, 0xB0000000);
+        drawRectLeft(matrix, scaledBarWidth - barBorder * 2, barWidth - barBorder * 2, barHeight - barBorder * 2, healthBarColor);
 
-        var borderBuffer = tessellator.begin(VertexFormat.DrawMode.TRIANGLE_STRIP, VertexFormats.POSITION_COLOR);
-        borderBuffer.vertex(positionMatrix, -0.62f, -0.28f, 0.2f).color(0xB0FFFFFF);
-        borderBuffer.vertex(positionMatrix, -0.62f, -0.47f, 0.2f).color(0xB0FFFFFF);
-        borderBuffer.vertex(positionMatrix, 0.62f, -0.28f, 0.2f).color(0xB0FFFFFF);
-        borderBuffer.vertex(positionMatrix, 0.62f, -0.47f, 0.2f).color(0xB0FFFFFF);
-        BufferRenderer.drawWithGlobalProgram(borderBuffer.end());
+        drawTextCentered(matrixStack, client.textRenderer, String.valueOf((int) client.player.getHealth()));
 
-        var bgBuffer = tessellator.begin(VertexFormat.DrawMode.TRIANGLE_STRIP, VertexFormats.POSITION_COLOR);
-        bgBuffer.vertex(positionMatrix, -0.6f, -0.3f, 0.2f).color(0xB0000000);
-        bgBuffer.vertex(positionMatrix, -0.6f, -0.45f, 0.2f).color(0xB0000000);
-        bgBuffer.vertex(positionMatrix, 0.6f, -0.3f, 0.2f).color(0xB0000000);
-        bgBuffer.vertex(positionMatrix, 0.6f, -0.45f, 0.2f).color(0xB0000000);
-        BufferRenderer.drawWithGlobalProgram(bgBuffer.end());
-
-        var fgBuffer = tessellator.begin(VertexFormat.DrawMode.TRIANGLE_STRIP, VertexFormats.POSITION_COLOR);
-        fgBuffer.vertex(positionMatrix, -0.6f, -0.3f, 0.2f).color(healthBarColor);
-        fgBuffer.vertex(positionMatrix, -0.6f, -0.45f, 0.2f).color(healthBarColor);
-        fgBuffer.vertex(positionMatrix, healthBarX, -0.3f, 0.2f).color(healthBarColor);
-        fgBuffer.vertex(positionMatrix, healthBarX, -0.45f, 0.2f).color(healthBarColor);
-        BufferRenderer.drawWithGlobalProgram(fgBuffer.end());
-
-        RenderSystem.enableCull();
+        matrixStack.pop();
         RenderSystem.disableBlend();
-        RenderSystem.depthFunc(GL11.GL_LEQUAL);
+        RenderSystem.enableDepthTest();
+    }
+
+    private void drawRectCentered(Matrix4f matrix, float width, float height, int argb) {
+        var halfWidth = width * 0.5f;
+        var halfHeight = height * 0.5f;
+        // TODO: Try Quad draw mode?
+        var buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        // Order is top right, top left,  bottom left, bottom right
+        buffer.vertex(matrix, halfWidth, halfHeight, 0).color(argb);
+        buffer.vertex(matrix, -halfWidth, halfHeight, 0).color(argb);
+        buffer.vertex(matrix, -halfWidth, -halfHeight, 0).color(argb);
+        buffer.vertex(matrix, halfWidth, -halfHeight, 0).color(argb);
+        BufferRenderer.drawWithGlobalProgram(buffer.end());
+    }
+
+    private void drawRectLeft(Matrix4f matrix, float width, float fullWidth, float height, int argb) {
+        var halfWidth = fullWidth * 0.5f;
+        var halfHeight = height * 0.5f;
+        var buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        buffer.vertex(matrix, width - halfWidth, halfHeight, 0).color(argb);
+        buffer.vertex(matrix, -halfWidth, halfHeight, 0).color(argb);
+        buffer.vertex(matrix, -halfWidth, -halfHeight, 0).color(argb);
+        buffer.vertex(matrix, width - halfWidth, -halfHeight, 0).color(argb);
+        BufferRenderer.drawWithGlobalProgram(buffer.end());
+    }
+
+    private void drawTextCentered(@NotNull MatrixStack matrixStack, @NotNull TextRenderer textRenderer, String text) {
+        matrixStack.push();
+        matrixStack.scale(0.02f, -0.02f, 0.02f);
+
+        textRenderer.draw(
+                text,
+                -textRenderer.getWidth(text) * 0.5f,
+                -textRenderer.fontHeight * 0.4f,
+                0xFFFFFF,
+                false,
+                matrixStack.peek().getPositionMatrix(),
+                this.vertexConsumer,
+                TextRenderer.TextLayerType.SEE_THROUGH,
+                0,
+                LightmapTextureManager.pack(15, 15)
+        );
+
+        this.vertexConsumer.draw();
 
         matrixStack.pop();
     }

@@ -36,7 +36,7 @@ public class NexusKeyFeature extends BaseFeature {
         }
 
         var slot = -1;
-        for (var i = 0; i < 9; i++) {
+        for (var i = 8; i > -1; i--) {
             var stack = client.player.getInventory().getStack(i);
 
             if (Items.isNexus(stack)) {
