@@ -1,5 +1,6 @@
 package mdsol.torilhosaddon.mixin.client;
 
+import mdsol.torilhosaddon.events.ClientDisconnectedCallback;
 import mdsol.torilhosaddon.events.ClientJoinWorldCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.DownloadingTerrainScreen;
@@ -15,5 +16,10 @@ public class MinecraftClientMixin {
     @Inject(method = "joinWorld", at = @At("TAIL"))
     private void joinWorld(ClientWorld world, DownloadingTerrainScreen.WorldEntryReason worldEntryReason, CallbackInfo ci) {
         ClientJoinWorldCallback.EVENT.invoker().onJoin(world);
+    }
+
+    @Inject(method = "onDisconnected", at = @At("TAIL"))
+    private void onDisconnected(CallbackInfo ci) {
+        ClientDisconnectedCallback.EVENT.invoker().onDisconnected();
     }
 }

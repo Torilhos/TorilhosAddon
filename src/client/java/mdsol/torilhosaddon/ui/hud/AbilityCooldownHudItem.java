@@ -1,43 +1,47 @@
 package mdsol.torilhosaddon.ui.hud;
 
+import io.wispforest.owo.ui.component.BoxComponent;
 import io.wispforest.owo.ui.component.Components;
 import io.wispforest.owo.ui.component.ItemComponent;
 import io.wispforest.owo.ui.container.Containers;
 import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.core.Insets;
-import io.wispforest.owo.ui.core.Positioning;
-import io.wispforest.owo.ui.core.Sizing;
-import io.wispforest.owo.ui.core.Surface;
+import io.wispforest.owo.ui.core.*;
 import mdsol.torilhosaddon.TorilhosAddon;
-import mdsol.torilhosaddon.ui.ItemSlotComponent;
 import mdsol.torilhosaddon.ui.hud.base.BaseHudItem;
 import mdsol.torilhosaddon.util.Items;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.math.MathHelper;
 
 public class AbilityCooldownHudItem extends BaseHudItem {
 
     private static final Surface SURFACE_COOLING_DOWN = Surface.flat(0xA0101010).and(Surface.outline(0x90FFFFFF));
     private static final Surface SURFACE_READY = Surface.flat(0xA0FF55FF).and(Surface.outline(0x90FFFFFF));
 
-    private FlowLayout itemSlotContainer;
-    private ItemSlotComponent itemSlotComponent;
+    private final int cooldownBarHeight = 12;
+    private FlowLayout cooldownContainer;
     private ItemComponent itemComponent;
-
-    private ItemStack previousAbility;
+    private BoxComponent cooldownBox;
+    private ItemStack trackedAbility;
     private float previousCooldownProgress;
 
     public AbilityCooldownHudItem() {
         super(Sizing.content(), Sizing.content(), Algorithm.VERTICAL, TorilhosAddon.id("hud_off_hand_cooldown"));
+    }
 
-        positioning(Positioning.across(50, 50));
-        padding(Insets.left(20));
+    @Override
+    public void enable() {
+        super.enable();
+        positioning(Positioning.relative(50, 50));
+        padding(Insets.left(40));
         allowOverflow(true);
+        trackedAbility = ItemStack.EMPTY;
+        previousCooldownProgress = -1;
     }
 
     @Override
     public void disable() {
         super.disable();
-        previousAbility = ItemStack.EMPTY;
+        trackedAbility = ItemStack.EMPTY;
         previousCooldownProgress = -1;
     }
 
@@ -51,28 +55,26 @@ public class AbilityCooldownHudItem extends BaseHudItem {
             return;
         }
 
-        var slotStack = itemSlotComponent.getStack();
-        var cooldownProgress = client.player.getItemCooldownManager().getCooldownProgress(slotStack.getItem(), 0);
+        var cooldownProgress = client.player.getItemCooldownManager().getCooldownProgress(trackedAbility, 0);
 
         if (cooldownProgress != previousCooldownProgress) {
             previousCooldownProgress = cooldownProgress;
-            itemSlotContainer.surface(cooldownProgress > 0 ? SURFACE_COOLING_DOWN : SURFACE_READY);
+            cooldownContainer.surface(cooldownProgress > 0 ? SURFACE_COOLING_DOWN : SURFACE_READY);
+            cooldownBox.verticalSizing(Sizing.fixed(MathHelper.floor(cooldownBarHeight * cooldownProgress)));
         }
 
-        var currentAbility = Items.getCurrentPlayerAbility();
+        var heldAbility = Items.getCurrentPlayerAbility();
 
-        if (!Items.isAbility(currentAbility)) {
+        if (heldAbility.isEmpty()) {
             // Show no item in the hud.
-            itemComponent.stack(ItemStack.EMPTY);
-            previousAbility = ItemStack.EMPTY;
+            itemComponent.stack(heldAbility);
             return;
         }
 
-        if (!currentAbility.equals(previousAbility)) {
+        if (!heldAbility.equals(trackedAbility)) {
             // If stack has changed, we update it in the hud.
-            previousAbility = currentAbility;
-            itemSlotComponent.setStack(currentAbility);
-            itemComponent.stack(currentAbility);
+            trackedAbility = heldAbility;
+            itemComponent.stack(heldAbility);
         }
     }
 
@@ -84,26 +86,25 @@ public class AbilityCooldownHudItem extends BaseHudItem {
             return;
         }
 
-        itemSlotComponent = new ItemSlotComponent(ItemStack.EMPTY);
-        var slotVerticalSizing = itemSlotComponent.verticalSizing().get();
+        cooldownBox = Components.box(Sizing.fixed(4), Sizing.fixed(16))
+                .fill(true)
+                .color(Color.ofArgb(0x60FFFFFF));
 
-        itemSlotContainer = Containers.verticalFlow(Sizing.content(), Sizing.content());
-        itemSlotContainer.surface(SURFACE_READY);
-        itemSlotContainer.padding(Insets.of(1));
-        itemSlotContainer.child(
-                Containers.verticalFlow(Sizing.fixed(4), slotVerticalSizing)
-                        .child(itemSlotComponent)
-                        .margins(Insets.top((int) (slotVerticalSizing.value * -0.25)))
-        );
+        var padding = 1;
+
+        cooldownContainer = Containers.verticalFlow(Sizing.content(), Sizing.fixed(cooldownBarHeight + padding * 2));
+        cooldownContainer.verticalAlignment(VerticalAlignment.BOTTOM);
+        cooldownContainer.surface(SURFACE_READY);
+        cooldownContainer.padding(Insets.of(padding));
+        cooldownContainer.child(cooldownBox);
 
         itemComponent = Components.item(ItemStack.EMPTY);
         itemComponent.sizing(Sizing.fixed(10)).margins(Insets.left(1));
 
         child(
                 Containers.horizontalFlow(Sizing.content(), Sizing.content())
-                        .child(itemSlotContainer)
+                        .child(cooldownContainer)
                         .child(itemComponent)
-                        .margins(Insets.top((int) (slotVerticalSizing.value * -0.375)))
         );
     }
 }

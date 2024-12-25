@@ -2,18 +2,21 @@ package mdsol.torilhosaddon.feature.base;
 
 import io.wispforest.owo.config.Option;
 import mdsol.torilhosaddon.TorilhosAddon;
+import mdsol.torilhosaddon.events.ClientDisconnectedCallback;
+import mdsol.torilhosaddon.events.NetworkHandlerOnGameJoin;
 import mdsol.torilhosaddon.util.Configs;
 
 import java.util.Objects;
 
-public class BaseToggleableFeature extends BaseFeature implements ToggleableFeature {
+public abstract class BaseToggleableFeature extends BaseFeature implements ToggleableFeature {
 
     private boolean enabled;
 
     protected BaseToggleableFeature(Option.Key configKey) {
         super();
-        setEnabled((Boolean) Objects.requireNonNull(TorilhosAddon.CONFIG.optionForKey(configKey)).value());
         Configs.bindFeatureToggle(configKey, this);
+        ClientDisconnectedCallback.EVENT.register(() -> setEnabled(false));
+        NetworkHandlerOnGameJoin.EVENT.register(() -> setEnabled((Boolean) Objects.requireNonNull(TorilhosAddon.CONFIG.optionForKey(configKey)).value()));
     }
 
     @Override
@@ -23,6 +26,10 @@ public class BaseToggleableFeature extends BaseFeature implements ToggleableFeat
 
     @Override
     public void setEnabled(boolean enabled) {
+        if (this.enabled == enabled || client.world == null) {
+            return;
+        }
+
         this.enabled = enabled;
 
         if (enabled) {

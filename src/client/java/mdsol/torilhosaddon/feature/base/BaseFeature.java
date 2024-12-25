@@ -5,7 +5,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-public class BaseFeature {
+public abstract class BaseFeature {
 
     protected final @NotNull MinecraftClient client;
 

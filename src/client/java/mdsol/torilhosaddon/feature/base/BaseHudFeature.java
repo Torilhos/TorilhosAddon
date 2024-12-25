@@ -3,7 +3,7 @@ package mdsol.torilhosaddon.feature.base;
 import io.wispforest.owo.config.Option;
 import mdsol.torilhosaddon.ui.hud.base.BaseHudItem;
 
-public class BaseHudFeature extends BaseToggleableFeature {
+public abstract class BaseHudFeature extends BaseToggleableFeature {
 
     private final BaseHudItem hudItem;
 

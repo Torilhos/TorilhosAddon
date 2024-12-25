@@ -10,6 +10,7 @@ public class FullBrightFeature extends BaseToggleableFeature {
 
     public FullBrightFeature() {
         super(TorilhosAddon.CONFIG.keys.enableFullBright);
+        // Wait for the client to start, otherwise client.options will not be available yet.
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
             clientStarted = true;
             setEnabled(TorilhosAddon.CONFIG.enableFullBright());

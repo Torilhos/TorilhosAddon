@@ -188,7 +188,6 @@ public class EventBossTrackerHudFeature extends BaseHudFeature {
             return;
         }
 
-        var isBossScreen = false;
         var updatedBosses = new HashMap<String, TrackedBoss.State>();
 
         for (var stack : simpleInventory.getHeldStacks()) {
@@ -214,17 +213,14 @@ public class EventBossTrackerHudFeature extends BaseHudFeature {
 
             if (loreString.contains("This boss is alive")) {
                 updatedBosses.put(bossItemNameMatcher.group(1), TrackedBoss.State.ALIVE);
-                isBossScreen = true;
             } else if (loreString.contains("This boss has been defeated")) {
                 updatedBosses.put(bossItemNameMatcher.group(1), TrackedBoss.State.DEFEATED);
-                isBossScreen = true;
             } else if (loreString.contains("This boss has not spawned")) {
                 trackedBosses.remove(bossItemNameMatcher.group(1));
-                isBossScreen = true;
             }
         }
 
-        if (isBossScreen) {
+        if (!updatedBosses.isEmpty()) {
             updatedBosses.forEach(this::updateTrackedBoss);
 
             if (client.player != null) {
