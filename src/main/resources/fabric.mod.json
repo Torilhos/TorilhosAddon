@@ -3,9 +3,9 @@
   "id": "torilhos-addon",
   "version": "${version}",
   "name": "Torilhos Addon",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "description": "QOL stuff for the Telos server",
   "authors": [
-    "Me!"
+    "Torilhos Guild"
   ],
   "contact": {
     "homepage": "https://fabricmc.net/",
@@ -20,6 +20,9 @@
     ],
     "client": [
       "mdsol.torilhosaddon.TorilhosAddonClient"
+    ],
+    "modmenu": [
+      "mdsol.torilhosaddon.config.ModMenuIntegration"
     ]
   },
   "mixins": [
@@ -31,9 +34,10 @@
   ],
   "depends": {
     "fabricloader": ">=0.16.5",
-    "minecraft": "~1.21.1",
+    "minecraft": "~1.21.6",
     "java": ">=21",
-    "fabric-api": "*"
+    "fabric-api": "*",
+    "cloth-config": ">=19.0.0"
   },
   "suggests": {
     "another-mod": "*"

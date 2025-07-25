@@ -1,6 +1,6 @@
 package mdsol.torilhosaddon.mixin.client;
 
-import mdsol.torilhosaddon.events.HandledScreenRemovedCallback;
+import mdsol.torilhosaddon.event.HandledScreenRemovedCallback;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import org.spongepowered.asm.mixin.Mixin;

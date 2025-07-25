@@ -1,8 +1,8 @@
 package mdsol.torilhosaddon.feature;
 
-import mdsol.torilhosaddon.TorilhosAddon;
+import mdsol.torilhosaddon.TorilhosAddonClient;
 import mdsol.torilhosaddon.feature.base.BaseToggleableFeature;
-import mdsol.torilhosaddon.util.Items;
+import mdsol.torilhosaddon.util.ItemUtils;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.Hand;
@@ -10,16 +10,23 @@ import net.minecraft.util.Hand;
 public class HoldToSwingFeature extends BaseToggleableFeature {
 
     public HoldToSwingFeature() {
-        super(TorilhosAddon.CONFIG.keys.enableHoldToSwing);
+        super(TorilhosAddonClient.config::isHoldToSwingEnabled);
+    }
+
+    @Override
+    public void init() {
+        super.init();
         ClientTickEvents.END_CLIENT_TICK.register(this::tick);
     }
 
     public void tick(MinecraftClient client) {
-        if (!isEnabled() || !client.options.attackKey.isPressed() || client.player == null) {
+        var player = client.player;
+
+        if (!isEnabledAndInGame() || player == null || !client.options.attackKey.isPressed()) {
             return;
         }
 
-        var currentWeapon = Items.getCurrentPlayerWeapon();
+        var currentWeapon = ItemUtils.getCurrentPlayerWeapon();
 
         if (currentWeapon.isEmpty()) {
             return;
@@ -28,10 +35,10 @@ public class HoldToSwingFeature extends BaseToggleableFeature {
         // We try to swing a bit earlier to compensate for ping. Using a static value for the delay since dynamically
         // compensating for the real ping value would add too much complexity, and with a ping over .2 we have other
         // problems anyway.
-        if (client.player.getItemCooldownManager().getCooldownProgress(currentWeapon, 0.0f) > 0.2f) {
+        if (player.getItemCooldownManager().getCooldownProgress(currentWeapon, 0.0f) > 0.2f) {
             return;
         }
 
-        client.player.swingHand(Hand.MAIN_HAND);
+        player.swingHand(Hand.MAIN_HAND);
     }
 }

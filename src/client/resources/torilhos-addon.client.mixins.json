@@ -4,10 +4,8 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "ClientPlayNetworkHandlerMixin",
-    "GameOptionsMixin",
     "HandledScreenMixin",
-    "MinecraftClientMixin",
-    "SimpleOptionMixin"
+    "MinecraftClientMixin"
   ],
   "injectors": {
     "defaultRequire": 1

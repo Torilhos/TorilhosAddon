@@ -1,22 +1,21 @@
 package mdsol.torilhosaddon.feature.base;
 
-import io.wispforest.owo.config.Option;
-import mdsol.torilhosaddon.TorilhosAddon;
-import mdsol.torilhosaddon.events.ClientDisconnectedCallback;
-import mdsol.torilhosaddon.events.NetworkHandlerOnGameJoin;
-import mdsol.torilhosaddon.util.Configs;
-
-import java.util.Objects;
+import java.util.function.BooleanSupplier;
+import mdsol.torilhosaddon.config.ModConfig;
 
 public abstract class BaseToggleableFeature extends BaseFeature implements ToggleableFeature {
 
+    private final BooleanSupplier configToggleSupplier;
     private boolean enabled;
 
-    protected BaseToggleableFeature(Option.Key configKey) {
+    protected BaseToggleableFeature(BooleanSupplier configToggleSupplier) {
         super();
-        Configs.bindFeatureToggle(configKey, this);
-        ClientDisconnectedCallback.EVENT.register(() -> setEnabled(false));
-        NetworkHandlerOnGameJoin.EVENT.register(() -> setEnabled((Boolean) Objects.requireNonNull(TorilhosAddon.CONFIG.optionForKey(configKey)).value()));
+        this.configToggleSupplier = configToggleSupplier;
+    }
+
+    @Override
+    public void init() {
+        this.setEnabled(this.configToggleSupplier.getAsBoolean());
     }
 
     @Override
@@ -26,7 +25,7 @@ public abstract class BaseToggleableFeature extends BaseFeature implements Toggl
 
     @Override
     public void setEnabled(boolean enabled) {
-        if (this.enabled == enabled || client.world == null) {
+        if (this.enabled == enabled) {
             return;
         }
 
@@ -40,9 +39,17 @@ public abstract class BaseToggleableFeature extends BaseFeature implements Toggl
         onDisable();
     }
 
-    protected void onEnable() {
+    @Override
+    public void onConfigChanged(ModConfig config) {
+        super.onConfigChanged(config);
+        setEnabled(configToggleSupplier.getAsBoolean());
     }
 
-    protected void onDisable() {
+    protected boolean isEnabledAndInGame() {
+        return isEnabled() && isInGame();
     }
+
+    protected void onEnable() {}
+
+    protected void onDisable() {}
 }

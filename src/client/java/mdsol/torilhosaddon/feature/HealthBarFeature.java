@@ -1,39 +1,43 @@
 package mdsol.torilhosaddon.feature;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import mdsol.torilhosaddon.TorilhosAddon;
+import mdsol.torilhosaddon.TorilhosAddonClient;
 import mdsol.torilhosaddon.feature.base.BaseToggleableFeature;
+import mdsol.torilhosaddon.render.CustomRenderLayers;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.render.*;
 import net.minecraft.client.util.BufferAllocator;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Matrix4f;
 
 public class HealthBarFeature extends BaseToggleableFeature {
 
-    // TODO: search for other uses of .immediate for good practices
-    private final VertexConsumerProvider.Immediate vertexConsumer = VertexConsumerProvider.immediate(new BufferAllocator(1536));
+    private final VertexConsumerProvider.Immediate vcp = VertexConsumerProvider.immediate(new BufferAllocator(1536));
 
     public HealthBarFeature() {
-        super(TorilhosAddon.CONFIG.keys.showHealthBar);
+        super(TorilhosAddonClient.config::isHealthBarEnabled);
+    }
+
+    @Override
+    public void init() {
+        super.init();
         WorldRenderEvents.LAST.register(this::render);
     }
 
     private void render(WorldRenderContext context) {
-        if (!isEnabled()
-                || client.player == null
+        var player = client.player;
+
+        if (!isEnabledAndInGame()
+                || player == null
                 || client.options.getPerspective().isFirstPerson()) {
             return;
         }
 
-        var healthPercentage = client.player.getHealth() / client.player.getMaxHealth();
+        var healthPercentage = player.getHealth() / player.getMaxHealth();
 
         if (healthPercentage == 1f) {
             return;
@@ -46,22 +50,18 @@ public class HealthBarFeature extends BaseToggleableFeature {
         }
 
         var camera = context.camera();
-        var tickDelta = context.tickCounter().getTickDelta(false);
+        var tickDelta = context.tickCounter().getTickProgress(false);
         var playerPos = new Vec3d(
-                MathHelper.lerp(tickDelta, client.player.lastRenderX, client.player.getX()),
-                MathHelper.lerp(tickDelta, client.player.lastRenderY, client.player.getY()),
-                MathHelper.lerp(tickDelta, client.player.lastRenderZ, client.player.getZ())
-        );
+                MathHelper.lerp(tickDelta, player.lastRenderX, player.getX()),
+                MathHelper.lerp(tickDelta, player.lastRenderY, player.getY()),
+                MathHelper.lerp(tickDelta, player.lastRenderZ, player.getZ()));
         var renderPos = playerPos.subtract(camera.getPos());
         var barWidth = 1.2f;
         var barHeight = 0.22f;
         var barBorder = 0.02f;
         var scaledBarWidth = barWidth * healthPercentage;
-        var healthBarColor = healthPercentage >= 0.75f
-                             ? 0xB040CC40
-                             : healthPercentage <= 0.4f
-                               ? 0xB0CC3030
-                               : 0xB0FFCC40;
+        var healthBarColor =
+                healthPercentage >= 0.75f ? 0xB040CC40 : healthPercentage <= 0.4f ? 0xB0CC3030 : 0xB0FFCC40;
 
         matrixStack.push();
 
@@ -75,48 +75,50 @@ public class HealthBarFeature extends BaseToggleableFeature {
         // Place bar slightly below the player
         matrixStack.translate(0, -0.4f, 0);
 
-        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.enableBlend();
-        RenderSystem.disableDepthTest();
-
         var matrix = matrixStack.peek().getPositionMatrix();
-        drawRectCentered(matrix, barWidth, barHeight, 0xB0FFFFFF);
-        drawRectCentered(matrix, barWidth - barBorder * 2, barHeight - barBorder * 2, 0xB0000000);
-        drawRectLeft(matrix, scaledBarWidth - barBorder * 2, barWidth - barBorder * 2, barHeight - barBorder * 2, healthBarColor);
 
-        drawTextCentered(matrixStack, client.textRenderer, String.valueOf((int) client.player.getHealth()));
+        drawRectCentered(matrix, barWidth, barHeight, 0xB0FFFFFF, -0.0011f);
+        drawRectCentered(matrix, barWidth - barBorder * 2, barHeight - barBorder * 2, 0xB0000000, -0.001f);
+        drawRectLeft(
+                matrix,
+                scaledBarWidth - barBorder * 2,
+                barWidth - barBorder * 2,
+                barHeight - barBorder * 2,
+                healthBarColor);
+        drawTextCentered(matrixStack, client.textRenderer, String.valueOf((int) player.getHealth()));
 
         matrixStack.pop();
-        RenderSystem.disableBlend();
-        RenderSystem.enableDepthTest();
     }
 
-    private void drawRectCentered(Matrix4f matrix, float width, float height, int argb) {
+    private void drawRectCentered(Matrix4f matrix, float width, float height, int argb, float z) {
         var halfWidth = width * 0.5f;
         var halfHeight = height * 0.5f;
-        // TODO: Try Quad draw mode?
-        var buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
-        // Order is top right, top left,  bottom left, bottom right
-        buffer.vertex(matrix, halfWidth, halfHeight, 0).color(argb);
-        buffer.vertex(matrix, -halfWidth, halfHeight, 0).color(argb);
-        buffer.vertex(matrix, -halfWidth, -halfHeight, 0).color(argb);
-        buffer.vertex(matrix, halfWidth, -halfHeight, 0).color(argb);
-        BufferRenderer.drawWithGlobalProgram(buffer.end());
+        var buffer = vcp.getBuffer(CustomRenderLayers.QUADS);
+
+        // Order is top right, top left, bottom left, bottom right
+        buffer.vertex(matrix, halfWidth, halfHeight, z).color(argb);
+        buffer.vertex(matrix, -halfWidth, halfHeight, z).color(argb);
+        buffer.vertex(matrix, -halfWidth, -halfHeight, z).color(argb);
+        buffer.vertex(matrix, halfWidth, -halfHeight, z).color(argb);
+
+        // @todo Need to figure out depth flickering issue to draw all rectangles at once.
+        vcp.draw();
     }
 
     private void drawRectLeft(Matrix4f matrix, float width, float fullWidth, float height, int argb) {
         var halfWidth = fullWidth * 0.5f;
         var halfHeight = height * 0.5f;
-        var buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
-        buffer.vertex(matrix, width - halfWidth, halfHeight, 0).color(argb);
-        buffer.vertex(matrix, -halfWidth, halfHeight, 0).color(argb);
-        buffer.vertex(matrix, -halfWidth, -halfHeight, 0).color(argb);
-        buffer.vertex(matrix, width - halfWidth, -halfHeight, 0).color(argb);
-        BufferRenderer.drawWithGlobalProgram(buffer.end());
+        var buffer = vcp.getBuffer(CustomRenderLayers.QUADS);
+
+        buffer.vertex(matrix, width - halfWidth, halfHeight, 0f).color(argb);
+        buffer.vertex(matrix, -halfWidth, halfHeight, 0f).color(argb);
+        buffer.vertex(matrix, -halfWidth, -halfHeight, 0f).color(argb);
+        buffer.vertex(matrix, width - halfWidth, -halfHeight, 0f).color(argb);
+
+        vcp.draw();
     }
 
-    private void drawTextCentered(@NotNull MatrixStack matrixStack, @NotNull TextRenderer textRenderer, String text) {
+    private void drawTextCentered(MatrixStack matrixStack, TextRenderer textRenderer, String text) {
         matrixStack.push();
         matrixStack.scale(0.02f, -0.02f, 0.02f);
 
@@ -124,16 +126,15 @@ public class HealthBarFeature extends BaseToggleableFeature {
                 text,
                 -textRenderer.getWidth(text) * 0.5f,
                 -textRenderer.fontHeight * 0.4f,
-                0xFFFFFF,
+                0xFFFFFFFF,
                 false,
                 matrixStack.peek().getPositionMatrix(),
-                this.vertexConsumer,
+                this.vcp,
                 TextRenderer.TextLayerType.SEE_THROUGH,
                 0,
-                LightmapTextureManager.pack(15, 15)
-        );
+                LightmapTextureManager.pack(15, 15));
 
-        this.vertexConsumer.draw();
+        this.vcp.draw();
 
         matrixStack.pop();
     }
