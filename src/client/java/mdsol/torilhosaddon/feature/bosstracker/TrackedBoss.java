@@ -1,19 +1,18 @@
-package mdsol.torilhosaddon.feature.model;
-
-import io.wispforest.owo.util.Observable;
+package mdsol.torilhosaddon.feature.bosstracker;
 
 import java.util.Objects;
+import java.util.Optional;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class TrackedBoss extends Observable<TrackedBoss> {
+public class TrackedBoss {
 
     private final BossData data;
-    private String calledPlayerName;
+    private @Nullable String calledPlayerName;
     private State state;
     private int portalTimer = 0;
     private double distanceMarkerValue = 0;
 
     public TrackedBoss(BossData data, State state) {
-        super(null);
         this.data = data;
         this.state = state;
     }
@@ -22,15 +21,12 @@ public class TrackedBoss extends Observable<TrackedBoss> {
         return data;
     }
 
-    public String getCalledPlayerName() {
-        return calledPlayerName;
+    public Optional<String> getCalledPlayerName() {
+        return Optional.ofNullable(calledPlayerName);
     }
 
-    public void setCalledPlayerName(String calledPlayerName) {
-        if (!Objects.equals(this.calledPlayerName, calledPlayerName)) {
-            this.calledPlayerName = calledPlayerName;
-            notifyObservers(this);
-        }
+    public void setCalledPlayerName(@Nullable String calledPlayerName) {
+        this.calledPlayerName = calledPlayerName;
     }
 
     public State getState() {
@@ -40,7 +36,6 @@ public class TrackedBoss extends Observable<TrackedBoss> {
     public void setState(State state) {
         if (!Objects.equals(this.state, state)) {
             this.state = state;
-            notifyObservers(this);
         }
     }
 
@@ -50,12 +45,10 @@ public class TrackedBoss extends Observable<TrackedBoss> {
 
     public void resetPortalTimer() {
         portalTimer = 30 * 20;
-        notifyObservers(this);
     }
 
     public int decrementPortalTimer() {
         portalTimer -= 1;
-        notifyObservers(this);
         return portalTimer;
     }
 
@@ -66,13 +59,12 @@ public class TrackedBoss extends Observable<TrackedBoss> {
     public void setDistanceMarkerValue(double distanceMarkerValue) {
         if (!Objects.equals(this.distanceMarkerValue, distanceMarkerValue)) {
             this.distanceMarkerValue = distanceMarkerValue;
-            notifyObservers(this);
         }
     }
 
     public enum State {
         ALIVE,
-        JUST_DEFEATED,
+        DEFEATED_PORTAL_ACTIVE,
         DEFEATED
     }
 }
