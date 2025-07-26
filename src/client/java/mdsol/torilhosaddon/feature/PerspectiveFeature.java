@@ -35,7 +35,7 @@ public class PerspectiveFeature extends BaseToggleableFeature {
     public void tick(MinecraftClient client) {
         var player = client.player;
 
-        if (!isInGame() || player == null) {
+        if (!isInWorld() || player == null) {
             return;
         }
 

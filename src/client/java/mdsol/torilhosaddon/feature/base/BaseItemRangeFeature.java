@@ -39,7 +39,7 @@ public abstract class BaseItemRangeFeature extends BaseToggleableFeature {
     }
 
     protected void tick(MinecraftClient client) {
-        if (!isEnabledAndInGame()) {
+        if (!isEnabledAndInWorld()) {
             return;
         }
 
@@ -63,7 +63,7 @@ public abstract class BaseItemRangeFeature extends BaseToggleableFeature {
     protected void render(WorldRenderContext context) {
         var player = client.player;
 
-        if (!isEnabledAndInGame() || !isHoldingItem || range < 0 || player == null || player.hasVehicle()) {
+        if (!isEnabledAndInWorld() || !isHoldingItem || range < 0 || player == null || player.hasVehicle()) {
             return;
         }
 

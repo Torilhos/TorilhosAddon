@@ -42,7 +42,7 @@ public class AbilityCooldownHudFeature extends BaseToggleableFeature {
     private void tick(MinecraftClient client) {
         var player = client.player;
 
-        if (!isEnabledAndInGame() || player == null) {
+        if (!isEnabledAndInWorld() || player == null) {
             return;
         }
 
@@ -64,7 +64,7 @@ public class AbilityCooldownHudFeature extends BaseToggleableFeature {
     }
 
     private void renderHud(DrawContext context, RenderTickCounter tickCounter) {
-        if (!isEnabledAndInGame()) {
+        if (!isEnabledAndInWorld()) {
             return;
         }
 

@@ -88,7 +88,7 @@ public class EventBossTrackerHudFeature extends BaseToggleableFeature {
     }
 
     private void tick(MinecraftClient client) {
-        if (!isEnabledAndInGame()) {
+        if (!isEnabledAndInWorld()) {
             return;
         }
 
@@ -112,7 +112,7 @@ public class EventBossTrackerHudFeature extends BaseToggleableFeature {
     }
 
     private void onGameMessage(Text message, boolean overlay) {
-        if (!isEnabledAndInGame()) {
+        if (!isEnabledAndInWorld()) {
             return;
         }
 
@@ -165,13 +165,13 @@ public class EventBossTrackerHudFeature extends BaseToggleableFeature {
     }
 
     private void onGameJoin() {
-        if (isEnabledAndInGame()) {
+        if (isEnabledAndInWorld()) {
             clearTrackedBosses();
         }
     }
 
     private void onScreenClosed(Screen screen) {
-        if (!isEnabledAndInGame()) {
+        if (!isEnabledAndInWorld()) {
             return;
         }
 
