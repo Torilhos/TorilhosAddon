@@ -11,7 +11,7 @@ public abstract class BaseFeature implements Feature {
         client = MinecraftClient.getInstance();
     }
 
-    protected boolean isInGame() {
+    protected boolean isInWorld() {
         return client.player != null && client.world != null;
     }
 

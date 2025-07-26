@@ -45,8 +45,8 @@ public abstract class BaseToggleableFeature extends BaseFeature implements Toggl
         setEnabled(configToggleSupplier.getAsBoolean());
     }
 
-    protected boolean isEnabledAndInGame() {
-        return isEnabled() && isInGame();
+    protected boolean isEnabledAndInWorld() {
+        return isEnabled() && isInWorld();
     }
 
     protected void onEnable() {}

@@ -22,7 +22,7 @@ public class HoldToSwingFeature extends BaseToggleableFeature {
     public void tick(MinecraftClient client) {
         var player = client.player;
 
-        if (!isEnabledAndInGame() || player == null || !client.options.attackKey.isPressed()) {
+        if (!isEnabledAndInWorld() || player == null || !client.options.attackKey.isPressed()) {
             return;
         }
 
