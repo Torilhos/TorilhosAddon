@@ -38,13 +38,12 @@ public class TrackedBossesComponent extends BaseComponent {
     public void draw(DrawContext context, RenderTickCounter tickCounter) {
         var aliveBosses = trackedBossesByState.get(TrackedBoss.State.ALIVE);
         var bossesWithPortal = trackedBossesByState.get(TrackedBoss.State.DEFEATED_PORTAL_ACTIVE);
-        var defeatedBosses = trackedBossesByState.get(TrackedBoss.State.DEFEATED);
 
-        if (aliveBosses == null || bossesWithPortal == null || defeatedBosses == null) {
+        if (aliveBosses == null || bossesWithPortal == null) {
             return;
         }
 
-        var totalLineCount = aliveBosses.size() + bossesWithPortal.size() + defeatedBosses.size();
+        var totalLineCount = aliveBosses.size() + bossesWithPortal.size();
         var activeBossLineCount = aliveBosses.size() + bossesWithPortal.size();
 
         if (totalLineCount == 0) {
@@ -52,19 +51,20 @@ public class TrackedBossesComponent extends BaseComponent {
         }
 
         var textRenderer = MinecraftClient.getInstance().textRenderer;
-        var headingSectionHeight = getSectionHeight(1, false);
+        var headingSectionHeight = getHeadingSectionHeight();
         var activeBossesSectionHeight = getSectionHeight(activeBossLineCount, ITEM_SIDE, true);
-        var defeatedBossesSectionHeight = getSectionHeight(defeatedBosses.size(), true);
-        var contentHeight = headingSectionHeight + activeBossesSectionHeight + defeatedBossesSectionHeight;
-        var headingText = Text.literal("Bosses %d/10".formatted(defeatedBosses.size()));
+        var contentHeight = headingSectionHeight + activeBossesSectionHeight;
+        var headingText = Text.literal("Realm Bosses");
         var contentWidth = textRenderer.getWidth(headingText);
 
         contentWidth = Math.max(contentWidth, buildBossGroup(aliveBosses));
         contentWidth = Math.max(contentWidth, buildBossGroup(bossesWithPortal));
-        contentWidth = Math.max(contentWidth, buildBossGroup(defeatedBosses));
 
         var boxWidth = contentWidth + PADDING * 2;
         var boxHeight = contentHeight + PADDING * 2;
+
+        context.getMatrices().pushMatrix();
+        context.getMatrices().scale(0.9f);
 
         context.fill(X, Y, X + boxWidth, Y + boxHeight, COLOR_BOX_BG);
         context.drawBorder(X, Y, boxWidth, boxHeight, COLOR_BOX_BORDER);
@@ -86,19 +86,11 @@ public class TrackedBossesComponent extends BaseComponent {
             lineY = drawNonDefeatedBossLine(context, boss, lineY);
         }
 
-        if (!defeatedBosses.isEmpty()) {
-            lineY += GAP_SECTION - GAP_LINE;
-
-            for (var boss : defeatedBosses) {
-                var bossLine = getBossLine(boss);
-                context.drawText(textRenderer, bossLine.text, X + PADDING, lineY, 0xFFFFFFFF, true);
-                lineY += textRenderer.fontHeight + GAP_LINE;
-            }
-        }
+        context.getMatrices().popMatrix();
     }
 
-    private int getSectionHeight(int lineCount, boolean hasGap) {
-        return getSectionHeight(lineCount, MinecraftClient.getInstance().textRenderer.fontHeight, hasGap);
+    private int getHeadingSectionHeight() {
+        return getSectionHeight(1, MinecraftClient.getInstance().textRenderer.fontHeight, false);
     }
 
     private int getSectionHeight(int lineCount, int lineHeight, boolean hasGap) {
