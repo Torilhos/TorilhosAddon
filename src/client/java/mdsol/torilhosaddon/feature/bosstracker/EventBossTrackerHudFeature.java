@@ -155,9 +155,8 @@ public class EventBossTrackerHudFeature extends BaseToggleableFeature {
         if (spawnedBossName.isPresent()) {
             var trackedBoss = trackedBosses.get(spawnedBossName.get());
 
-            // If a boss that is already being tracked has re-spawned, we clear the tracker state.
             if (trackedBoss != null) {
-                clearTrackedBosses();
+                trackedBoss.setCalledPlayerName(null);
             }
 
             updateTrackedBossByName(spawnedBossName.get(), TrackedBoss.State.ALIVE);
